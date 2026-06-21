@@ -8,8 +8,11 @@ class BankService {
 
   BankService(String token) : _client = ApiClient(token: token);
 
-  Future<List<Bank>> getBanksByUser(String uuid) async {
-    final response = await _client.get('/bank/find-all/links/by/user/$uuid');
+  Future<List<Bank>> getBanksByUser([String? uuid]) async {
+    final endpoint = uuid != null
+        ? '/bank/find-all/links/by/user/$uuid'
+        : '/bank/find-all/links/by-user';
+    final response = await _client.get(endpoint);
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
       return data.map((json) => Bank.fromJson(json)).toList();
@@ -40,7 +43,7 @@ class BankService {
         'totalAmount': totalAmount,
       },
     );
-    if (response.statusCode == 200) {
+    if (response.statusCode == 201) {
       return jsonDecode(response.body);
     }
     throw Exception('Erro ao vincular banco');
@@ -55,4 +58,14 @@ class BankService {
     }
     throw Exception('Erro ao desvincular banco');
   }
+
+  Future<List<Bank>> getAvailableBanks() async {
+    final response = await _client.get('/bank/find-all');
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((json) => Bank.fromJson(json)).toList();
+    }
+    throw Exception('Erro ao carregar bancos');
+  }
+
 }

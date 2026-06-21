@@ -38,7 +38,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   Future<void> _loadCategories() async {
     setState(() => _isLoading = true);
     try {
-      final categories = await _service.getCategoriesByUser(widget.userUuid);
+      final categories = await _service.getCategoriesByUser();
       if (mounted) setState(() => _categories = categories);
     } catch (e) {
       if (mounted) {
@@ -78,7 +78,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             onPressed: () async {
               try {
                 await _service.createCategory(
-                  widget.userUuid,
                   _nameController.text,
                   _typeController.text,
                 );

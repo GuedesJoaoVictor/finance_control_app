@@ -2,13 +2,16 @@ import 'dart:convert';
 
 import 'package:finance_control/core/api/api_client.dart';
 import 'package:finance_control/core/models/user.dart';
+import 'package:finance_control/core/utils/jwt_util.dart';
 
 class AuthService {
   String? _token;
   User? _user;
+  JwtClaims? _claims;
 
   String? get token => _token;
   User? get user => _user;
+  JwtClaims? get claims => _claims;
   bool get isLogged => _token != null;
 
   Future<Map<String, dynamic>> login(String email, String password) async {
@@ -21,6 +24,7 @@ class AuthService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       _token = data['token'] as String?;
+      _claims = JwtDecoder.decode(_token);
       if (data['user'] != null) {
         _user = User.fromJson(data['user'] as Map<String, dynamic>);
       }
@@ -60,5 +64,6 @@ class AuthService {
   void logout() {
     _token = null;
     _user = null;
+    _claims = null;
   }
 }

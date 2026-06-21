@@ -8,9 +8,11 @@ class CategoryService {
 
   CategoryService(String token) : _client = ApiClient(token: token);
 
-  Future<List<Category>> getCategoriesByUser(String uuid) async {
-    final response =
-        await _client.get('/category/find-all-by-user/$uuid');
+  Future<List<Category>> getCategoriesByUser([String? uuid]) async {
+    final endpoint = uuid != null
+        ? '/category/find-all-by-user/$uuid'
+        : '/category/find-all-by-user';
+    final response = await _client.get(endpoint);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final List<dynamic> list = data['data'];
@@ -20,15 +22,18 @@ class CategoryService {
   }
 
   Future<Category> createCategory(
-    String uuid,
     String name,
-    String type,
-  ) async {
+    String type, [
+    String? uuid,
+  ]) async {
+    final endpoint = uuid != null
+        ? '/category/create-by-user-uuid/$uuid'
+        : '/category/create-by-user';
     final response = await _client.post(
-      '/category/create-by-user-uuid/$uuid',
+      endpoint,
       {'name': name, 'type': type},
     );
-    if (response.statusCode == 200) {
+    if (response.statusCode == 201) {
       final data = jsonDecode(response.body);
       return Category.fromJson(data['data']);
     }

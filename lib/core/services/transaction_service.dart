@@ -8,9 +8,11 @@ class TransactionService {
 
   TransactionService(String token) : _client = ApiClient(token: token);
 
-  Future<List<Revenue>> getRevenuesByUser(String uuid) async {
-    final response =
-        await _client.get('/transaction/find-all/revenue/by/user/$uuid');
+  Future<List<Revenue>> getRevenuesByUser([String? uuid]) async {
+    final endpoint = uuid != null
+        ? '/transaction/find-all/revenue/by/user/$uuid'
+        : '/transaction/find-all/revenue/by-user';
+    final response = await _client.get(endpoint);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final List<dynamic> list = data['data'];
@@ -22,7 +24,7 @@ class TransactionService {
   Future<Revenue> createRevenue(Map<String, dynamic> revenueData) async {
     final response =
         await _client.post('/transaction/create/revenue', revenueData);
-    if (response.statusCode == 200) {
+    if (response.statusCode == 201) {
       final data = jsonDecode(response.body);
       return Revenue.fromJson(data['data']);
     }
@@ -49,9 +51,11 @@ class TransactionService {
     throw Exception('Erro ao deletar receita');
   }
 
-  Future<List<Expense>> getExpensesByUser(String uuid) async {
-    final response =
-        await _client.get('/transaction/find-all/expense/by/user/$uuid');
+  Future<List<Expense>> getExpensesByUser([String? uuid]) async {
+    final endpoint = uuid != null
+        ? '/transaction/find-all/expense/by/user/$uuid'
+        : '/transaction/find-all/expense/by-user';
+    final response = await _client.get(endpoint);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final List<dynamic> list = data['data'];
@@ -63,7 +67,7 @@ class TransactionService {
   Future<Expense> createExpense(Map<String, dynamic> expenseData) async {
     final response =
         await _client.post('/transaction/create/expense', expenseData);
-    if (response.statusCode == 200) {
+    if (response.statusCode == 201) {
       final data = jsonDecode(response.body);
       return Expense.fromJson(data['data']);
     }
@@ -88,5 +92,27 @@ class TransactionService {
       return data['data'] == true;
     }
     throw Exception('Erro ao deletar despesa');
+  }
+
+  Future<List<Revenue>> getRevenuesByBank(int bankId) async {
+    final response =
+        await _client.get('/transaction/find-all/revenue/by/bank/$bankId');
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final List<dynamic> list = data['data'];
+      return list.map((json) => Revenue.fromJson(json)).toList();
+    }
+    throw Exception('Erro ao carregar receitas do banco');
+  }
+
+  Future<List<Expense>> getExpensesByBank(int bankId) async {
+    final response =
+        await _client.get('/transaction/find-all/expense/by/bank/$bankId');
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final List<dynamic> list = data['data'];
+      return list.map((json) => Expense.fromJson(json)).toList();
+    }
+    throw Exception('Erro ao carregar despesas do banco');
   }
 }

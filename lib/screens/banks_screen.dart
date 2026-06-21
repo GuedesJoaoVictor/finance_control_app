@@ -1,5 +1,6 @@
 import 'package:finance_control/core/models/bank.dart';
 import 'package:finance_control/core/services/bank_service.dart';
+import 'package:finance_control/screens/bank_detail_screen.dart';
 import 'package:flutter/material.dart';
 
 class BanksScreen extends StatefulWidget {
@@ -15,7 +16,7 @@ class BanksScreen extends StatefulWidget {
 class _BanksScreenState extends State<BanksScreen> {
   final _nameController = TextEditingController();
   final _amountController = TextEditingController();
-  final int _bankId = 1;
+  int _bankId = 1;
   List<Bank> _banks = [];
   bool _isLoading = true;
 
@@ -38,7 +39,7 @@ class _BanksScreenState extends State<BanksScreen> {
   Future<void> _loadBanks() async {
     setState(() => _isLoading = true);
     try {
-      final banks = await _service.getBanksByUser(widget.userUuid);
+      final banks = await _service.getBanksByUser();
       if (mounted) setState(() => _banks = banks);
     } catch (e) {
       if (mounted) {
@@ -51,7 +52,11 @@ class _BanksScreenState extends State<BanksScreen> {
     }
   }
 
-  void _showLinkDialog() {
+  void _showLinkDialog() async {
+    _isLoading = true;
+    final banks = await _service.getAvailableBanks();
+    _isLoading = false;
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -68,6 +73,24 @@ class _BanksScreenState extends State<BanksScreen> {
               keyboardType: TextInputType.number,
               decoration:
                   const InputDecoration(labelText: 'Saldo inicial'),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12.0),
+              child: DropdownMenu(
+                label: const Text('Banco'),
+                initialSelection: _bankId,
+                dropdownMenuEntries: banks
+                    .map(
+                      (bank) => DropdownMenuEntry(
+                        value: bank.id,
+                        label: bank.name ?? 'Banco',
+                      ),
+                    )
+                    .toList(),
+                onSelected: (value) {
+                  setState(() => _bankId = value!);
+                },
+              ),
             ),
           ],
         ),
@@ -99,6 +122,47 @@ class _BanksScreenState extends State<BanksScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _unlinkBank(int vinculoId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Desvincular Banco'),
+        content: const Text(
+          'Todas as transações deste banco serão removidas. Continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Remover'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await _service.unlinkBank(vinculoId);
+      _loadBanks();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Banco removido com sucesso')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -143,7 +207,37 @@ class _BanksScreenState extends State<BanksScreen> {
                       leading: const Icon(Icons.account_balance),
                       title: Text(bank.name ?? 'Banco'),
                       subtitle: Text('Tipo: ${bank.type ?? '-'}'),
-                      trailing: const Icon(Icons.chevron_right),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.chevron_right),
+                          PopupMenuButton<String>(
+                            onSelected: (v) {
+                              if (v == 'delete') {
+                                _unlinkBank(bank.vinculoId!);
+                              }
+                            },
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Text('Remover',
+                                    style: TextStyle(color: Colors.red)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => BankDetailScreen(
+                              token: widget.token,
+                              bank: bank,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   );
                 },
