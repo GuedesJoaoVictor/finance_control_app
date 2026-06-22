@@ -117,6 +117,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextFormField(
                     controller: _cpfController,
                     keyboardType: TextInputType.number,
+                    maxLength: 11,
                     decoration: InputDecoration(
                       labelText: 'CPF',
                       prefixIcon: const Icon(Icons.badge_outlined),
@@ -127,6 +128,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
                         return 'Informe o CPF';
+                      }
+                      if (v.length != 11) {
+                        return 'CPF inválido';
+                      }
+                      if (!RegExp(r'^\d{11}$').hasMatch(v)) {
+                        return 'CPF deve conter apenas números';
                       }
                       return null;
                     },

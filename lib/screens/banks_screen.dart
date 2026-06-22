@@ -54,7 +54,7 @@ class _BanksScreenState extends State<BanksScreen> {
 
   void _showLinkDialog() async {
     _isLoading = true;
-    final banks = await _service.getAvailableBanks();
+    final banks = await _service.getAvailableBanks(widget.userUuid);
     _isLoading = false;
     if (!mounted) return;
     showDialog(

@@ -7,7 +7,7 @@ class ApiClient {
 
   final String? _token;
 
-  ApiClient({String? token}) : _token = token;
+  ApiClient({this._token});
 
   Map<String, String> _buildHeaders({Map<String, String>? extra}) {
     final headers = <String, String>{

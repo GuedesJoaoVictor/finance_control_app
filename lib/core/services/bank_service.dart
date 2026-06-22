@@ -59,8 +59,8 @@ class BankService {
     throw Exception('Erro ao desvincular banco');
   }
 
-  Future<List<Bank>> getAvailableBanks() async {
-    final response = await _client.get('/bank/find-all');
+  Future<List<Bank>> getAvailableBanks(String userUuid) async {
+    final response = await _client.get('/bank/find-all/by/$userUuid');
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
       return data.map((json) => Bank.fromJson(json)).toList();

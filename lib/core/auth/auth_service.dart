@@ -51,7 +51,7 @@ class AuthService {
       'cpf': cpf,
     });
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 201) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     } else {
       final error = jsonDecode(response.body);
