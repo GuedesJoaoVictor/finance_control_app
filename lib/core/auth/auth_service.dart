@@ -61,6 +61,19 @@ class AuthService {
     }
   }
 
+  void updateUserName(String name) {
+    if (_user != null) {
+      _user = User(
+        id: _user!.id,
+        uuid: _user!.uuid,
+        name: name,
+        email: _user!.email,
+        cpf: _user!.cpf,
+        role: _user!.role,
+      );
+    }
+  }
+
   void logout() {
     _token = null;
     _user = null;

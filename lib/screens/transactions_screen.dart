@@ -1,9 +1,6 @@
-import 'package:finance_control/core/models/bank.dart';
-import 'package:finance_control/core/models/category.dart';
 import 'package:finance_control/core/models/transaction.dart';
-import 'package:finance_control/core/services/bank_service.dart';
-import 'package:finance_control/core/services/category_service.dart';
 import 'package:finance_control/core/services/transaction_service.dart';
+import 'package:finance_control/screens/add_transaction_form.dart';
 import 'package:flutter/material.dart';
 
 class TransactionsScreen extends StatefulWidget {
@@ -22,9 +19,68 @@ class _TransactionsScreenState extends State<TransactionsScreen>
   late final TabController _tabController;
   late final TransactionService _transactionService;
 
-  List<Revenue> _revenues = [];
-  List<Expense> _expenses = [];
+  List<Revenue> _allRevenues = [];
+  List<Expense> _allExpenses = [];
   bool _isLoading = true;
+
+  int? _filterMonth;
+  int? _filterYear;
+
+  static const _monthNames = [
+    'Todos', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+    'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
+  ];
+
+  List<Revenue> get _revenues {
+    if (_filterMonth == null && _filterYear == null) return _allRevenues;
+    return _allRevenues.where((r) {
+      if (r.receiptDate == null) return false;
+      final parts = r.receiptDate!.split('-');
+      if (parts.length != 3) return false;
+      final year = int.tryParse(parts[0]);
+      final month = int.tryParse(parts[1]);
+      if (_filterYear != null && year != _filterYear) return false;
+      if (_filterMonth != null && month != _filterMonth) return false;
+      return true;
+    }).toList();
+  }
+
+  List<Expense> get _expenses {
+    if (_filterMonth == null && _filterYear == null) return _allExpenses;
+    return _allExpenses.where((e) {
+      if (e.expenseDate == null) return false;
+      final parts = e.expenseDate!.split('-');
+      if (parts.length != 3) return false;
+      final year = int.tryParse(parts[0]);
+      final month = int.tryParse(parts[1]);
+      if (_filterYear != null && year != _filterYear) return false;
+      if (_filterMonth != null && month != _filterMonth) return false;
+      return true;
+    }).toList();
+  }
+
+  Set<int> get _availableYears {
+    final years = <int>{};
+    for (final r in _allRevenues) {
+      if (r.receiptDate != null) {
+        final parts = r.receiptDate!.split('-');
+        if (parts.length == 3) {
+          final y = int.tryParse(parts[0]);
+          if (y != null) years.add(y);
+        }
+      }
+    }
+    for (final e in _allExpenses) {
+      if (e.expenseDate != null) {
+        final parts = e.expenseDate!.split('-');
+        if (parts.length == 3) {
+          final y = int.tryParse(parts[0]);
+          if (y != null) years.add(y);
+        }
+      }
+    }
+    return years;
+  }
 
   double get _totalRevenues =>
       _revenues.fold(0, (sum, r) => sum + (r.value ?? 0));
@@ -55,8 +111,8 @@ class _TransactionsScreenState extends State<TransactionsScreen>
       ]);
       if (mounted) {
         setState(() {
-          _revenues = results[0] as List<Revenue>;
-          _expenses = results[1] as List<Expense>;
+          _allRevenues = results[0] as List<Revenue>;
+          _allExpenses = results[1] as List<Expense>;
           _isLoading = false;
         });
       }
@@ -68,6 +124,13 @@ class _TransactionsScreenState extends State<TransactionsScreen>
         );
       }
     }
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _filterMonth = null;
+      _filterYear = null;
+    });
   }
 
   Future<void> _deleteRevenue(int id) async {
@@ -124,7 +187,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
   void _showAddTransactionDialog() {
     showDialog(
       context: context,
-      builder: (ctx) => _AddTransactionForm(
+      builder: (ctx) => AddTransactionForm(
         token: widget.token,
         userUuid: widget.userUuid,
         onSaved: () {
@@ -147,7 +210,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
   }) {
     showDialog(
       context: context,
-      builder: (ctx) => _AddTransactionForm(
+      builder: (ctx) => AddTransactionForm(
         token: widget.token,
         userUuid: widget.userUuid,
         onSaved: () {
@@ -174,6 +237,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                _buildFilterBar(),
                 _buildBalanceCard(),
                 TabBar(
                   controller: _tabController,
@@ -197,6 +261,57 @@ class _TransactionsScreenState extends State<TransactionsScreen>
         onPressed: _showAddTransactionDialog,
         tooltip: 'Adicionar Transação',
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Widget _buildFilterBar() {
+    final years = _availableYears.toList()..sort((a, b) => b.compareTo(a));
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Row(
+        children: [
+          Expanded(
+            child: DropdownButtonFormField<int>(
+              value: _filterMonth,
+              decoration: InputDecoration(
+                labelText: 'Mês',
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                isDense: true,
+              ),
+              items: List.generate(12, (i) => i + 1).map((m) {
+                return DropdownMenuItem(value: m, child: Text(_monthNames[m]));
+              }).toList(),
+              onChanged: (v) => setState(() => _filterMonth = v),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonFormField<int>(
+              value: _filterYear,
+              decoration: InputDecoration(
+                labelText: 'Ano',
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                isDense: true,
+              ),
+              items: years.map((y) {
+                return DropdownMenuItem(value: y, child: Text(y.toString()));
+              }).toList(),
+              onChanged: (v) => setState(() => _filterYear = v),
+            ),
+          ),
+          if (_filterMonth != null || _filterYear != null) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.clear),
+              onPressed: _clearFilters,
+              tooltip: 'Limpar filtros',
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -397,329 +512,6 @@ class _TransactionsScreenState extends State<TransactionsScreen>
           );
         },
       ),
-    );
-  }
-}
-
-class _AddTransactionForm extends StatefulWidget {
-  final String token;
-  final String userUuid;
-  final VoidCallback onSaved;
-
-  final bool editMode;
-  final bool isExpense;
-  final int? revenueId;
-  final int? expenseId;
-  final String? initialDescription;
-  final double? initialValue;
-  final String? initialDate;
-  final int? initialBankId;
-  final int? initialCategoryId;
-
-  const _AddTransactionForm({
-    required this.token,
-    required this.userUuid,
-    required this.onSaved,
-    this.editMode = false,
-    this.isExpense = false,
-    this.revenueId,
-    this.expenseId,
-    this.initialDescription,
-    this.initialValue,
-    this.initialDate,
-    this.initialBankId,
-    this.initialCategoryId,
-  });
-
-  @override
-  State<_AddTransactionForm> createState() => _AddTransactionFormState();
-}
-
-class _AddTransactionFormState extends State<_AddTransactionForm> {
-  final _formKey = GlobalKey<FormState>();
-  final _descriptionController = TextEditingController();
-  final _valueController = TextEditingController();
-  final _dateController = TextEditingController();
-
-  late final BankService _bankService;
-  late final CategoryService _categoryService;
-  late final TransactionService _transactionService;
-
-  bool _isExpense = false;
-  List<Bank> _banks = [];
-  List<Category> _categories = [];
-  Bank? _selectedBank;
-  Category? _selectedCategory;
-  bool _loadingData = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _isExpense = widget.isExpense;
-    if (widget.initialDescription != null) {
-      _descriptionController.text = widget.initialDescription!;
-    }
-    if (widget.initialValue != null) {
-      _valueController.text = widget.initialValue.toString();
-    }
-    if (widget.initialDate != null) {
-      _dateController.text = widget.initialDate!;
-    }
-
-    _bankService = BankService(widget.token);
-    _categoryService = CategoryService(widget.token);
-    _transactionService = TransactionService(widget.token);
-    _loadFormData();
-  }
-
-  @override
-  void dispose() {
-    _descriptionController.dispose();
-    _valueController.dispose();
-    _dateController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadFormData() async {
-    try {
-      final results = await Future.wait([
-        _bankService.getBanksByUser(),
-        _categoryService.getCategoriesByUser(),
-      ]);
-      if (mounted) {
-        setState(() {
-          _banks = results[0] as List<Bank>;
-          _categories = results[1] as List<Category>;
-          _loadingData = false;
-
-          if (widget.initialBankId != null) {
-            _selectedBank = _banks.cast<Bank?>().firstWhere(
-                  (b) => b?.id == widget.initialBankId,
-                  orElse: () => null,
-                );
-          }
-          if (widget.initialCategoryId != null) {
-            _selectedCategory = _categories.cast<Category?>().firstWhere(
-                  (c) => c?.id == widget.initialCategoryId,
-                  orElse: () => null,
-                );
-          }
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _loadingData = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao carregar dados: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _pickDate() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _dateController.text.isNotEmpty
-          ? DateTime.tryParse(_dateController.text) ?? DateTime.now()
-          : DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
-    if (date != null) {
-      _dateController.text =
-          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    }
-  }
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final body = {
-      'description': _descriptionController.text.trim(),
-      'value': double.parse(_valueController.text.trim()),
-      'category': {'id': _selectedCategory!.id},
-      'bank': {'id': _selectedBank!.id},
-      if (_isExpense)
-        'expenseDate': _dateController.text
-      else
-        'receiptDate': _dateController.text,
-    };
-
-    try {
-      if (widget.editMode) {
-        if (_isExpense) {
-          await _transactionService.updateExpense(widget.expenseId!, body);
-        } else {
-          await _transactionService.updateRevenue(widget.revenueId!, body);
-        }
-      } else {
-        if (_isExpense) {
-          await _transactionService.createExpense(body);
-        } else {
-          await _transactionService.createRevenue(body);
-        }
-      }
-      widget.onSaved();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: $e')),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isEditing = widget.editMode;
-    return AlertDialog(
-      title: Text(
-        isEditing
-            ? (_isExpense ? 'Editar Despesa' : 'Editar Receita')
-            : (_isExpense ? 'Nova Despesa' : 'Nova Receita'),
-      ),
-      content: _loadingData
-          ? const SizedBox(
-              height: 100,
-              child: Center(child: CircularProgressIndicator()),
-            )
-          : SingleChildScrollView(
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SegmentedButton<bool>(
-                      segments: const [
-                        ButtonSegment(value: false, label: Text('Receita')),
-                        ButtonSegment(value: true, label: Text('Despesa')),
-                      ],
-                      selected: {_isExpense},
-                      onSelectionChanged: (v) =>
-                          setState(() => _isExpense = v.first),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _descriptionController,
-                      decoration: InputDecoration(
-                        labelText: 'Descrição',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Informe a descrição';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _valueController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'Valor',
-                        prefixText: 'R\$ ',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Informe o valor';
-                        }
-                        if (double.tryParse(v.trim()) == null) {
-                          return 'Valor inválido';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _dateController,
-                      readOnly: true,
-                      onTap: _pickDate,
-                      decoration: InputDecoration(
-                        labelText: 'Data',
-                        suffixIcon: const Icon(Icons.calendar_today),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Selecione a data';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<Bank>(
-                      initialValue: _selectedBank,
-                      decoration: InputDecoration(
-                        labelText: 'Banco',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      items: _banks
-                          .map(
-                            (b) => DropdownMenuItem(
-                              value: b,
-                              child: Text(b.name ?? 'Banco'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) =>
-                          setState(() => _selectedBank = v),
-                      validator: (v) {
-                        if (v == null) return 'Selecione um banco';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<Category>(
-                      initialValue: _selectedCategory,
-                      decoration: InputDecoration(
-                        labelText: 'Categoria',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      items: _categories
-                          .map(
-                            (c) => DropdownMenuItem(
-                              value: c,
-                              child: Text(c.name ?? 'Categoria'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) =>
-                          setState(() => _selectedCategory = v),
-                      validator: (v) {
-                        if (v == null) return 'Selecione uma categoria';
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
-        ),
-        ElevatedButton(
-          onPressed: _loadingData ? null : _submit,
-          child: Text(
-            isEditing
-                ? 'Salvar'
-                : (_isExpense ? 'Criar Despesa' : 'Criar Receita'),
-          ),
-        ),
-      ],
     );
   }
 }

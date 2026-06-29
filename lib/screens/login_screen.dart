@@ -1,10 +1,13 @@
 import 'package:finance_control/core/auth/auth_service.dart';
+import 'package:finance_control/core/theme/theme_provider.dart';
 import 'package:finance_control/screens/home_screen.dart';
 import 'package:finance_control/screens/register_screen.dart';
 import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final ThemeProvider? themeProvider;
+
+  const LoginScreen({super.key, this.themeProvider});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -41,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => HomeScreen(authService: _authService),
+          builder: (_) => HomeScreen(authService: _authService, themeProvider: widget.themeProvider),
         ),
       );
     } catch (e) {
@@ -60,6 +63,18 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        actions: [
+          if (widget.themeProvider != null)
+            IconButton(
+              icon: Icon(
+                widget.themeProvider!.isDark ? Icons.light_mode : Icons.dark_mode,
+              ),
+              onPressed: widget.themeProvider!.toggle,
+              tooltip: 'Alternar tema',
+            ),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
