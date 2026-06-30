@@ -84,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  FlutterLogo(size: 100),
+                  Image.asset('assets/icon-removebg-preview.png', width: 100, height: 100),
                   const SizedBox(height: 24),
                   Text(
                     'Finance Control',

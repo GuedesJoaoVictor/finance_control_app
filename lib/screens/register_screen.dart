@@ -87,7 +87,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  FlutterLogo(size: 80),
+                  Image.asset('assets/icon-removebg-preview.png', width: 80, height: 80),
                   const SizedBox(height: 16),
                   Text(
                     'Crie sua conta',

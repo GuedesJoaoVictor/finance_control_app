@@ -1,9 +1,15 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:http/http.dart' as http;
 
 class ApiClient {
-  static const String baseUrl = "http://localhost:8081";
+  static String get baseUrl {
+    if (Platform.isAndroid) {
+      return "http://10.0.2.2:8081";
+    }
+    return "http://localhost:8081";
+  }
 
   final String? _token;
 
