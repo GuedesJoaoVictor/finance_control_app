@@ -56,6 +56,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
   Bank? _selectedBank;
   Category? _selectedCategory;
   bool _loadingData = true;
+  bool _submitting = false;
 
   @override
   void initState() {
@@ -139,6 +140,8 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
+    setState(() => _submitting = true);
+
     final body = {
       'description': _descriptionController.text.trim(),
       'value': double.parse(_valueController.text.trim()),
@@ -167,6 +170,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
       widget.onSaved();
     } catch (e) {
       if (mounted) {
+        setState(() => _submitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erro: $e')),
         );
@@ -316,14 +320,20 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancelar'),
         ),
-        ElevatedButton(
-          onPressed: _loadingData ? null : _submit,
-          child: Text(
-            isEditing
-                ? 'Salvar'
-                : (_isExpense ? 'Criar Despesa' : 'Criar Receita'),
+          ElevatedButton(
+            onPressed: (_loadingData || _submitting) ? null : _submit,
+            child: _submitting
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(
+                    isEditing
+                        ? 'Salvar'
+                        : (_isExpense ? 'Criar Despesa' : 'Criar Receita'),
+                  ),
           ),
-        ),
       ],
     );
   }

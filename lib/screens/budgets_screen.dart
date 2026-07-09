@@ -299,6 +299,7 @@ class _BudgetFormState extends State<_BudgetForm> {
   List<Category> _categories = [];
   Category? _selectedCategory;
   bool _loading = true;
+  bool _submitting = false;
 
   @override
   void initState() {
@@ -333,6 +334,7 @@ class _BudgetFormState extends State<_BudgetForm> {
     final limit = double.tryParse(_limitController.text);
     if (limit == null || limit <= 0) return;
 
+    setState(() => _submitting = true);
     try {
       await _budgetService.create(Budget(
         category: _selectedCategory,
@@ -340,9 +342,11 @@ class _BudgetFormState extends State<_BudgetForm> {
         year: widget.year,
         limitAmount: limit,
       ));
+      _limitController.clear();
       widget.onSaved();
     } catch (e) {
       if (mounted) {
+        setState(() => _submitting = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e')));
       }
     }
@@ -380,7 +384,16 @@ class _BudgetFormState extends State<_BudgetForm> {
             ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-        ElevatedButton(onPressed: _loading ? null : _submit, child: const Text('Criar')),
+        ElevatedButton(
+          onPressed: (_loading || _submitting) ? null : _submit,
+          child: _submitting
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Criar'),
+        ),
       ],
     );
   }

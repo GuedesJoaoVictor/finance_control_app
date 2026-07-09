@@ -299,6 +299,7 @@ class _RecurringFormState extends State<_RecurringForm> {
   Bank? _selectedBank;
   Category? _selectedCategory;
   bool _loading = true;
+  bool _submitting = false;
 
   @override
   void initState() {
@@ -373,6 +374,7 @@ class _RecurringFormState extends State<_RecurringForm> {
       'bank': {'id': _selectedBank!.id},
     };
 
+    setState(() => _submitting = true);
     try {
       if (widget.existing != null) {
         await _service.update(widget.existing!.id!, body);
@@ -387,9 +389,13 @@ class _RecurringFormState extends State<_RecurringForm> {
           bank: _selectedBank,
         ));
       }
+      _descriptionController.clear();
+      _valueController.clear();
+      _dayController.clear();
       widget.onSaved();
     } catch (e) {
       if (mounted) {
+        setState(() => _submitting = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e')));
       }
     }
@@ -469,7 +475,16 @@ class _RecurringFormState extends State<_RecurringForm> {
             ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-        ElevatedButton(onPressed: _loading ? null : _submit, child: const Text('Salvar')),
+        ElevatedButton(
+          onPressed: (_loading || _submitting) ? null : _submit,
+          child: _submitting
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Salvar'),
+        ),
       ],
     );
   }

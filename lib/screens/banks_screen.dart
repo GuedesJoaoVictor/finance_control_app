@@ -53,74 +53,90 @@ class _BanksScreenState extends State<BanksScreen> {
   }
 
   void _showLinkDialog() async {
-    _isLoading = true;
     final banks = await _service.getAvailableBanks(widget.userUuid);
-    _isLoading = false;
     if (!mounted) return;
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Vincular Banco'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Nome da conta'),
+      builder: (ctx) {
+        var linking = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Vincular Banco'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(labelText: 'Nome da conta'),
+                ),
+                TextField(
+                  controller: _amountController,
+                  keyboardType: TextInputType.number,
+                  decoration:
+                      const InputDecoration(labelText: 'Saldo inicial'),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12.0),
+                  child: DropdownMenu(
+                    label: const Text('Banco'),
+                    initialSelection: _bankId,
+                    dropdownMenuEntries: banks
+                        .map(
+                          (bank) => DropdownMenuEntry(
+                            value: bank.id,
+                            label: bank.name ?? 'Banco',
+                          ),
+                        )
+                        .toList(),
+                    onSelected: (value) {
+                      setState(() => _bankId = value!);
+                    },
+                  ),
+                ),
+              ],
             ),
-            TextField(
-              controller: _amountController,
-              keyboardType: TextInputType.number,
-              decoration:
-                  const InputDecoration(labelText: 'Saldo inicial'),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12.0),
-              child: DropdownMenu(
-                label: const Text('Banco'),
-                initialSelection: _bankId,
-                dropdownMenuEntries: banks
-                    .map(
-                      (bank) => DropdownMenuEntry(
-                        value: bank.id,
-                        label: bank.name ?? 'Banco',
-                      ),
-                    )
-                    .toList(),
-                onSelected: (value) {
-                  setState(() => _bankId = value!);
-                },
+            actions: [
+              TextButton(
+                onPressed: linking ? null : () => Navigator.pop(ctx),
+                child: const Text('Cancelar'),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
+              ElevatedButton(
+                onPressed: linking
+                    ? null
+                    : () async {
+                        setDialogState(() => linking = true);
+                        try {
+                          await _service.linkBankToUser(
+                            widget.userUuid,
+                            _bankId,
+                            _nameController.text,
+                            double.parse(_amountController.text),
+                          );
+                          _nameController.clear();
+                          _amountController.clear();
+                          if (!ctx.mounted) return;
+                          Navigator.pop(ctx);
+                          _loadBanks();
+                        } catch (e) {
+                          setDialogState(() => linking = false);
+                          if (!ctx.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Erro: $e')),
+                          );
+                        }
+                      },
+                child: linking
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Vincular'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                await _service.linkBankToUser(
-                  widget.userUuid,
-                  _bankId,
-                  _nameController.text,
-                  double.parse(_amountController.text),
-                );
-                if (!ctx.mounted) return;
-                Navigator.pop(ctx);
-                _loadBanks();
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Erro: $e')),
-                );
-              }
-            },
-            child: const Text('Vincular'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

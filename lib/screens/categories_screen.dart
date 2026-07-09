@@ -54,46 +54,65 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   void _showCreateDialog() {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Nova Categoria'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Nome'),
+      builder: (ctx) {
+        var creating = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Nova Categoria'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(labelText: 'Nome'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _typeController,
+                  decoration: const InputDecoration(labelText: 'Tipo (RECEITA/DESPESA)'),
+                ),
+              ],
             ),
-            TextField(
-              controller: _typeController,
-              decoration: const InputDecoration(labelText: 'Tipo (RECEITA/DESPESA)'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
+            actions: [
+              TextButton(
+                onPressed: creating ? null : () => Navigator.pop(ctx),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: creating
+                    ? null
+                    : () async {
+                        setDialogState(() => creating = true);
+                        try {
+                          await _service.createCategory(
+                            _nameController.text,
+                            _typeController.text,
+                          );
+                          _nameController.clear();
+                          _typeController.clear();
+                          if (!ctx.mounted) return;
+                          Navigator.pop(ctx);
+                          _loadCategories();
+                        } catch (e) {
+                          setDialogState(() => creating = false);
+                          if (!ctx.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Erro: $e')),
+                          );
+                        }
+                      },
+                child: creating
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Criar'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                await _service.createCategory(
-                  _nameController.text,
-                  _typeController.text,
-                );
-                if (!ctx.mounted) return;
-                Navigator.pop(ctx);
-                _loadCategories();
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Erro: $e')),
-                );
-              }
-            },
-            child: const Text('Criar'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

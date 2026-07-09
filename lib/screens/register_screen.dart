@@ -1,4 +1,5 @@
 import 'package:finance_control/core/auth/auth_service.dart';
+import 'package:finance_control/core/utils/cpf_formatter.dart';
 import 'package:finance_control/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -37,11 +38,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
+      final cpfClean = _cpfController.text.replaceAll(RegExp(r'\D'), '');
       await _authService.register(
         _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
-        _cpfController.text.trim(),
+        cpfClean,
       );
 
       if (!mounted) return;
@@ -117,7 +119,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextFormField(
                     controller: _cpfController,
                     keyboardType: TextInputType.number,
-                    maxLength: 11,
+                    maxLength: 14,
+                    inputFormatters: [CpfInputFormatter()],
                     decoration: InputDecoration(
                       labelText: 'CPF',
                       prefixIcon: const Icon(Icons.badge_outlined),
@@ -129,11 +132,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       if (v == null || v.trim().isEmpty) {
                         return 'Informe o CPF';
                       }
-                      if (v.length != 11) {
+                      final digits = v.replaceAll(RegExp(r'\D'), '');
+                      if (digits.length != 11) {
                         return 'CPF inválido';
-                      }
-                      if (!RegExp(r'^\d{11}$').hasMatch(v)) {
-                        return 'CPF deve conter apenas números';
                       }
                       return null;
                     },
